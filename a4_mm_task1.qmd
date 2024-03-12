@@ -1,0 +1,112 @@
+---
+title: "Assignment 4 - Task 1"
+author: "Meet Muchhala"
+format: 
+  html:
+    embed-resources: true
+    code-fold: true
+    toc: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# 
+
+```{r}
+library(tidyverse)
+library(here)
+library(ggfortify)
+
+```
+
+## Initializing and setting up data
+
+```{r}
+
+## Loading the dataset
+
+world_env_vars <- read_csv(here('data', 'world_env_vars.csv'))
+
+## Dropping NAs due to PCA analysis and assigning factor levels to accessibility column
+world_env_vars_clean <- world_env_vars %>%
+  janitor::clean_names() %>%
+  drop_na() %>% 
+  mutate(accessibility_to_cities =
+                     case_when(accessibility_to_cities <= 100 ~ "Very High", 
+                              accessibility_to_cities <= 500 ~ "High",
+                              accessibility_to_cities <= 1000 ~ "Medium",
+                              accessibility_to_cities <= 11000 ~ "Low")) %>% 
+  mutate(accessibility_to_cities = factor(accessibility_to_cities, levels = c('Low', 'Medium', 'High', 'Very High')))
+
+
+glimpse(world_env_vars_clean)
+names(world_env_vars_clean)
+```
+
+## PCA Analysis 
+
+In this PCA analysis, the relationship between accessibility to cities and other wind variables in a country would be explored through the identification of principal components that capture the underlying patterns and relationships in the data. The inclusion of accessibility to cities as a variable in the PCA can help uncover how it relates to other factors influencing wind energy installations and identify potential patterns or clusters in the data across the world. 
+
+```{r}
+
+## Selecing relevant variables in case of building PCA analysis for wind energy installations and development country-wise
+
+env_var_pca <- world_env_vars_clean %>% 
+  select(wind, elevation, aspect, slope, rain_mean_annual, 
+         temp_mean_annual, temp_annual_range, cloudiness) %>% 
+  select(where(is.numeric)) %>%
+  prcomp(scale = TRUE)
+
+env_var_pca$rotation
+
+```
+
+## Bi-plot 
+
+```{r}
+
+autoplot(env_var_pca,
+     	data = world_env_vars_clean,
+     	loadings = TRUE,
+     	colour = 'accessibility_to_cities',
+     	loadings.label = TRUE,
+     	loadings.colour = "black",
+     	loadings.label.colour = "black",
+     	loadings.label.vjust = -0.8,
+     	loadings.label.hjust = 0.1
+     	) +
+  ggtitle("Accessibilities to cities globally for Wind Power - PCA") +
+  guides(color = guide_legend(title = "Accessibility to Cities")) +
+  scale_color_manual(values = c('red', 'orange', 'yellowgreen', 'darkgreen')) +
+  theme_minimal()
+```
+
+* Mean annual rainfall and Annual temprature are negatively correlated. These two variables also have fairly long arrows, indicating larger variance.
+* Mean annual rainfall and cloudiness are the most closely correlated; more rain is correlated with more 
+cloudiness.
+* Aspect has the shortest arrow, indicating less variance. 
+* There may be some clustering of the "Very High" accessibility observations, as seen around the Annual temperature and wind arrow. 
+
+
+## Screeplot
+
+```{r}
+sd_vec <- env_var_pca$sdev
+var_vec <- sd_vec^2 ### standard deviation is sqrt of variance
+pc_names <- colnames(env_var_pca$rotation)
+pct_expl_df <- data.frame(v = var_vec,
+                          pct_v = var_vec / sum(var_vec),
+                          pc = fct_inorder(pc_names)) %>%
+  mutate(pct_lbl = paste0(round(pct_v*100, 1), '%'))
+
+ggplot(pct_expl_df, aes(x = pc, y = v)) +
+  geom_col(color = "tomato4", fill = "turquoise") +
+  ggtitle("Accessibilities to cities globally for Wind Power - Screeplot")+
+  geom_text(aes(label = pct_lbl), vjust = 0, nudge_y = .002) +
+  labs(x = 'Dimensions', y = 'Percentage of explained variances')+
+  theme_minimal()
+```
+
+* The screeplot indicates four PCAs explain more than 80% of the variance. This may be a good cutoff point, beyond which additional components may not be as useful.
