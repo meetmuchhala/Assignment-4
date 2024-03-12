@@ -1,0 +1,96 @@
+---
+title: "Assignment 4 - Task 2"
+author: "Meet Muchhala"
+format: html
+editor: visual
+---
+
+
+## Libraries
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(NbClust)
+library(cluster)
+library(factoextra)
+library(dendextend)
+library(ggdendro)
+```
+
+
+## Initializing the data
+```{r}
+
+stream_chemistry <- read_csv(here("data", "sbc_lter_registered_stream_chemistry.csv")) %>% 
+  mutate(across(where(is.numeric), ~na_if(., -999)))
+```
+
+## NA columns check and management
+
+```{r}
+## Identifying columns which have a lot of NA's
+
+summary(stream_chemistry)
+
+## Dropping the columns with high NA's >50% by checking the proportion of NA's
+missing_prop <- colMeans(is.na(stream_chemistry))
+
+# Subset the data frame to include only columns with less than or equal to 50% missing values
+threshold <- 0.5
+stream_chem_filtered <- stream_chemistry[, missing_prop <= threshold]
+
+# tpc_uM, tpn_uM, tpp_uM, and tss_mgperLiter have >50% NA's were dropped 
+
+
+```
+
+
+```{r}
+
+stream_chemistry_clus <- stream_chem_filtered %>% 
+  group_by(site_code) %>% 
+  summarize(
+    "Ammonium" = mean(nh4_uM, na.rm = TRUE), ### Find mean chemical indicator across each site
+    "Nitrate" = mean(no3_uM, na.rm = TRUE),
+    "Phosphorous" = mean(po4_uM, na.rm = TRUE),
+    "Dissolved nitrogen" = mean(tdn_uM, na.rm = TRUE),
+    "Dissolved phosphorous" = mean(tdp_uM, na.rm = TRUE),
+    "Specific conductivity" = mean(spec_cond_uSpercm, na.rm = TRUE)) %>% 
+  drop_na()
+```
+
+
+```{r}
+## Scaling the data 
+
+stream_chemistry_scale <- stream_chemistry_clus %>% 
+  select(2:7) %>% ### Remove stream code to scale only numbers
+  scale()
+
+
+rownames(stream_chemistry_scale) <- stream_chemistry_clus$site_code
+
+### Testing Euclidean distance
+
+euc_distance <- dist(stream_chemistry_scale, method = "euclidean")
+
+#### Performing hierarchical clustering by complete linkage
+
+hc_complete <- hclust(euc_distance, method = "complete")
+
+## Plot it
+
+ggdendrogram(hc_complete,
+             rotate = TRUE) +
+  theme_minimal() +
+  labs(x = "Site Code", y = "Euclidian Distance")+
+  ggtitle("Complete Linkage Cluster Dendrogram") 
+```
+
+
+* Site DV01 has its own branch, which suggests it is most dissimilar from the other stream sites and so is BC02.
+* More closely nested sites, like SP02 and MC00 are closed cluster in terms of water chemistry with certain level of similarities in the closer branches based on distance is AB00 and then on next step GV01 and MC06. Lastly, the lease similarity in that branch is AT07.
+* In other case, RS02 and HO00, suggest similarities in water chemistry. 
+* Cutting the dendrogram at different distances reveals different clusters, which could be helpful for future investigation of the similarities and dissimilarities between the sites and of the water quality variables that result in the more nested clusters. 
