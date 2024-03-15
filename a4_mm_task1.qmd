@@ -6,6 +6,8 @@ format:
     embed-resources: true
     code-fold: true
     toc: true
+    number-sections: true
+    theme: solar
 execute:
   echo: true
   warning: false
@@ -15,20 +17,16 @@ execute:
 # Wind Power Development Sites: Principal Component Analysis
 
 ## Overview
+
 The primary objective of this analysis is to conduct a Principal Components Analysis (PCA) on the provided dataset. PCA enables us to identify underlying patterns and relationships within the data, particularly focusing on how accessibility to cities relates to other wind variables globally. The insights gained from this analysis will aid in understanding the potential impact of accessibility to cities on wind energy installations and development across different regions.
 
 ## Dataset Summary
+
 The dataset utilized for this analysis comprises miscellaneous environmental and climatic variables at the country level. Compiled by @zander_venter and sourced from Kaggle, the dataset encompasses a range of metrics obtained from Google Earth Engine. These metrics are derived by calculating means for each country at a reduced scale of approximately 10km.
 
-Data Citation:
-Venter, Zander. (2018). Environmental variables for world countries. Retrieved 2024-02-02 from Kaggle.
+Data Citation: Venter, Zander. (2018). Environmental variables for world countries. Retrieved 2024-02-02 from Kaggle.
 
-Pseudocode Outline
-* Load the dataset and preprocess it by handling missing values and assigning factor levels to the "accessibility_to_cities" column.
-* Perform PCA analysis on selected wind-related variables.
-* Determine the loadings of each principal component.
-*Generate a biplot to visualize the relationships between variables and observations.
-* Create a screeplot to assess the variance explained by each principal component.
+Pseudocode Outline \* Load the dataset and preprocess it by handling missing values and assigning factor levels to the "accessibility_to_cities" column. \* Perform PCA analysis on selected wind-related variables. \* Determine the loadings of each principal component. *Generate a biplot to visualize the relationships between variables and observations.* Create a screeplot to assess the variance explained by each principal component.
 
 ## Setting up libraries
 
@@ -59,14 +57,17 @@ world_env_vars_clean <- world_env_vars %>%
   mutate(accessibility_to_cities = factor(accessibility_to_cities, levels = c('Low', 'Medium', 'High', 'Very High')))
 
 
-glimpse(world_env_vars_clean)
-names(world_env_vars_clean)
+#glimpse(world_env_vars_clean)
+#names(world_env_vars_clean)
 ```
-## PCA Analysis 
 
-In this PCA analysis, the relationship between accessibility to cities and other wind variables in a country would be explored through the identification of principal components that capture the underlying patterns and relationships in the data. The inclusion of accessibility to cities as a variable in the PCA can help uncover how it relates to other factors influencing wind energy installations and identify potential patterns or clusters in the data across the world. 
+## PCA Analysis & Bi-plot
+
+In this PCA analysis, the relationship between accessibility to cities and other wind variables in a country would be explored through the identification of principal components that capture the underlying patterns and relationships in the data. The inclusion of accessibility to cities as a variable in the PCA can help uncover how it relates to other factors influencing wind energy installations and identify potential patterns or clusters in the data across the world.
 
 ```{r}
+#| label: fig-biplot
+#| fig-cap: Bi-Plot exploring the relationships across chosen variables for wind power accessibility in cities across Principal Component 1 and Principal Component 2.
 
 ## Selecing relevant variables in case of building PCA analysis for wind energy installations and development country-wise
 
@@ -76,13 +77,7 @@ env_var_pca <- world_env_vars_clean %>%
   select(where(is.numeric)) %>%
   prcomp(scale = TRUE)
 
-env_var_pca$rotation
-
-```
-
-## Bi-plot of the analysis
-
-```{r}
+#env_var_pca$rotation
 
 autoplot(env_var_pca,
      	data = world_env_vars_clean,
@@ -98,11 +93,15 @@ autoplot(env_var_pca,
   guides(color = guide_legend(title = "Accessibility to Cities")) +
   scale_color_manual(values = c('red', 'orange', 'yellowgreen', 'darkgreen')) +
   theme_minimal()
+
 ```
 
 ## Screeplot of the analysis
 
 ```{r}
+#| label: fig-screeplot
+#| fig-cap: "Screeplot describing the variances explained by each principal component."
+
 sd_vec <- env_var_pca$sdev
 var_vec <- sd_vec^2 ### standard deviation is sqrt of variance
 pc_names <- colnames(env_var_pca$rotation)
@@ -121,10 +120,8 @@ ggplot(pct_expl_df, aes(x = pc, y = v)) +
 
 ## Summary & Conclusion
 
-* Mean annual rainfall and Annual temprature are negatively correlated. These two variables also have fairly long arrows, indicating larger variance.
-* Mean annual rainfall and cloudiness are the most closely correlated; more rain is correlated with more 
-cloudiness.
-* Aspect has the shortest arrow, indicating less variance. 
-* There may be some clustering of the "Very High" accessibility observations, as seen around the Annual temperature and wind arrow. 
-* The screeplot indicates four PCAs explain more than 80% of the variance. This may be a good cutoff point, beyond which additional components may not be as useful.
-
+-   Mean annual rainfall and Annual temprature are negatively correlated. These two variables also have fairly long arrows, indicating larger variance.
+-   Mean annual rainfall and cloudiness are the most closely correlated; more rain is correlated with more cloudiness.
+-   Aspect has the shortest arrow, indicating less variance.
+-   There may be some clustering of the "Very High" accessibility observations, as seen around the Annual temperature and wind arrow.
+-   The screeplot indicates four PCAs explain more than 80% of the variance. This may be a good cutoff point, beyond which additional components may not be as useful.
