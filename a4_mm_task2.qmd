@@ -1,12 +1,40 @@
 ---
 title: "Assignment 4 - Task 2"
 author: "Meet Muchhala"
-format: html
-editor: visual
+format: 
+  html:
+    embed-resources: true
+    code-fold: true
+    toc: true
+    number-sections: true
+    theme: minty
+execute:
+  echo: true
+  warning: false
+  message: false
 ---
 
+# Agglomerative Hierarchical Clustering Analysis of Water Chemistry: Santa Barbara Coastal Drainage
 
-## Libraries
+## Overview
+The primary objective of this analysis is to perform hierarchical clustering by complete linkage on water chemistry data collected from various sites within the Santa Barbara Coastal drainage area. By summarizing the data at the site level and calculating Euclidean distances between sites, we aim to identify clusters of sites exhibiting similar patterns of water chemistry. The dendrogram resulting from hierarchical clustering will provide insights into the multivariate clustering of sites based on their water chemistry characteristics.
+
+## Dataset Summary
+The dataset utilized for this analysis consists of water chemistry data from the Santa Barbara Coastal drainage area, ongoing since 2000. This dataset is part of the Santa Barbara Coastal Long-Term Ecological Research (SBC LTER) project and provides valuable insights into stream chemistry dynamics in the region.
+
+### Data Citation
+Santa Barbara Coastal LTER and Melack, John M. (2019). SBC LTER: Land: Stream chemistry in the Santa Barbara Coastal drainage area, ongoing since 2000 ver 16. Environmental Data Initiative. DOI: 10.6073/pasta/67a558a24ceed9a0a5bf5e46ab841174.
+
+## Pseudocode Outline
+* Load the water chemistry dataset and convert -999 values to NA.
+* Identify columns with a high proportion of NA values (>50%) and drop them from the analysis.
+* Summarize the data at the site level, either by listwise deletion or by calculating means with na.rm = TRUE.
+* Scale the summarized data to prepare for hierarchical clustering.
+* Calculate Euclidean distances between sites.
+* Perform hierarchical clustering by complete linkage.
+* Visualize the dendrogram representing multivariate clustering of sites based on water chemistry characteristics.
+
+## Setting up libraries 
 
 ```{r}
 library(tidyverse)
@@ -20,19 +48,20 @@ library(ggdendro)
 ```
 
 
-## Initializing the data
+## Initializing the dataset 
+
 ```{r}
 
 stream_chemistry <- read_csv(here("data", "sbc_lter_registered_stream_chemistry.csv")) %>% 
   mutate(across(where(is.numeric), ~na_if(., -999)))
 ```
 
-## NA columns check and management
+## NA values management
 
 ```{r}
 ## Identifying columns which have a lot of NA's
 
-summary(stream_chemistry)
+#summary(stream_chemistry)
 
 ## Dropping the columns with high NA's >50% by checking the proportion of NA's
 missing_prop <- colMeans(is.na(stream_chemistry))
@@ -61,6 +90,7 @@ stream_chemistry_clus <- stream_chem_filtered %>%
   drop_na()
 ```
 
+## Scaling and Calculating Euclidean Distance 
 
 ```{r}
 ## Scaling the data 
@@ -80,15 +110,24 @@ euc_distance <- dist(stream_chemistry_scale, method = "euclidean")
 
 hc_complete <- hclust(euc_distance, method = "complete")
 
+```
+
+## Hierarchichial Cluster Dendrogram
+
+```{r}
+#| label: fig-dendrogram
+#| fig-cap: "Hierarchial Cluster Dendrogram for stream chemistry across Santa Barbara Coastal Drainage"
+
 ## Plot it
 
 ggdendrogram(hc_complete,
              rotate = TRUE) +
   theme_minimal() +
   labs(x = "Site Code", y = "Euclidian Distance")+
-  ggtitle("Complete Linkage Cluster Dendrogram") 
+  ggtitle("Complete Linkage Cluster Dendrogram")  
 ```
 
+## Analysis outcomes
 
 * Site DV01 has its own branch, which suggests it is most dissimilar from the other stream sites and so is BC02.
 * More closely nested sites, like SP02 and MC00 are closed cluster in terms of water chemistry with certain level of similarities in the closer branches based on distance is AB00 and then on next step GV01 and MC06. Lastly, the lease similarity in that branch is AT07.
